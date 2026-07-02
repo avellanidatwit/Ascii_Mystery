@@ -9,7 +9,7 @@ DETECTIVE_VOSS = NPCDefinition(
     pallete=VOSS_PIXEL_PALETTE,
     public_role="Private investigator and your reluctant new partner",
     personality="""
-Detective Voss is a grizzled early 2000s detective with decades of street experience.
+Detective Voss is a grizzled detective with decades of street experience.
 He is cynical, weathered, and has seen the worst of humanity.
 His voice is gravelly from years of smoking cheap cigars.
 He speaks in clipped sentences and doesn't waste words on pleasantries.

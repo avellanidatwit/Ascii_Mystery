@@ -5,54 +5,58 @@ from pathlib import Path
 from typing import Any, Dict
 
 from openai import OpenAI
-from dotenv import load_dotenv
 
 from models import NPCDefinition
 from characters import *
 from images import *
 
-load_dotenv(Path(__file__).parent / ".env")
 
-client = OpenAI(
-    api_key=os.getenv("OPENAI_API_KEY")
-)
+def load_env_file(path: Path) -> None:
+    """Load simple KEY=VALUE pairs from a .env file into the process environment."""
+    if not path.exists():
+        return
+
+    with open(path, "r", encoding="utf-8") as env_file:
+        for raw_line in env_file:
+            line = raw_line.strip()
+
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+
+            key, value = line.split("=", 1)
+            key = key.strip()
+            value = value.strip().strip('"').strip("'")
+
+            if key and key not in os.environ:
+                os.environ[key] = value
+
+
+BASE_DIR = Path(__file__).parent
+load_env_file(BASE_DIR / ".env")
+
+api_key = os.getenv("OPENAI_API_KEY")
+
+if not api_key:
+    raise ValueError("OPENAI_API_KEY is missing. Make sure your .env file is in the same folder as this Python file.")
+
+client = OpenAI(api_key=api_key)
 
 MODEL = os.getenv("OPENAI_MODEL", "gpt-4o")
-SAVE_DIR = Path("saves")
-CASE_SAVE_FILE = SAVE_DIR / "case_save.json"
-
-SAVE_DIR.mkdir(exist_ok=True)
 
 
 # Select which NPC to use
 NPC = DETECTIVE_VOSS
 
 # --------------------------------------------------
-# Default Save Data
+# Default Game State
 # --------------------------------------------------
-def get_npc_save_file(npc_def: NPCDefinition) -> Path:
-    return SAVE_DIR / f"{npc_def.id}_save.json"
-
-
-def reset_all_npc_saves() -> None:
-    for character in CHARACTERS.values():
-        save_file = get_npc_save_file(character)
-
-        if save_file.exists():
-            save_file.unlink()
-            
-            
-def start_new_case() -> tuple[NPCDefinition, Dict[str, Any], Dict[str, Any]]:
-    reset_all_npc_saves()
-
+def start_new_case() -> tuple[NPCDefinition, Dict[str, Dict[str, Any]], Dict[str, Any]]:
     npc_def = NPC
-    game_state = new_game_state(npc_def)
-    case_state = new_case_state()
+    game_states = {
+        npc_def.id: new_game_state(npc_def)
+    }
 
-    save_game(npc_def, game_state)
-    save_case_state(case_state)
-
-    return npc_def, game_state, case_state
+    return npc_def, game_states, new_case_state()
 
 
 def new_game_state(npc_def: NPCDefinition) -> Dict[str, Any]:
@@ -71,33 +75,6 @@ def new_game_state(npc_def: NPCDefinition) -> Dict[str, Any]:
         "hidden_state": npc_def.hidden_state_vars.copy(),
         "recent_conversation": []
     }
-
-
-def load_game(npc_def: NPCDefinition) -> Dict[str, Any]:
-    save_file = get_npc_save_file(npc_def)
-
-    if save_file.exists():
-        with open(save_file, "r", encoding="utf-8") as file:
-            game_state = json.load(file)
-
-        relationship = game_state["npc_memory"].setdefault("relationship", {})
-        for stat in npc_def.relationship_stats:
-            relationship.setdefault(stat, npc_def.relationship_defaults.get(stat, 50))
-
-        hidden_state = game_state.setdefault("hidden_state", {})
-        for key, value in npc_def.hidden_state_vars.items():
-            hidden_state.setdefault(key, value)
-
-        return game_state
-
-    return new_game_state(npc_def)
-
-
-def save_game(npc_def: NPCDefinition, game_state: Dict[str, Any]) -> None:
-    save_file = get_npc_save_file(npc_def)
-
-    with open(save_file, "w", encoding="utf-8") as file:
-        json.dump(game_state, file, indent=2)
 
 
 # --------------------------------------------------
@@ -131,7 +108,6 @@ def randomize_killer() -> str:
 def add_case_note(
     case_state: Dict[str, Any],
     npc_def: NPCDefinition,
-    player_action: str,
     player_dialogue: str,
     npc_dialogue: str
 ) -> None:
@@ -140,7 +116,6 @@ def add_case_note(
 
     note = {
         "npc": npc_def.name,
-        "player_action": player_action,
         "player_dialogue": player_dialogue,
         "npc_response": npc_dialogue
     }
@@ -160,41 +135,16 @@ def new_case_state() -> Dict[str, Any]:
     }
 
 
-def load_case_state() -> Dict[str, Any]:
-    if CASE_SAVE_FILE.exists():
-        with open(CASE_SAVE_FILE, "r", encoding="utf-8") as file:
-            case_state = json.load(file)
-
-        killer_id = case_state.get("killer_id")
-
-        if killer_id in CHARACTERS and killer_id != "voss":
-            return case_state
-
-    case_state = new_case_state()
-    save_case_state(case_state)
-    return case_state
-
-
-def save_case_state(case_state: Dict[str, Any]) -> None:
-    with open(CASE_SAVE_FILE, "w", encoding="utf-8") as file:
-        json.dump(case_state, file, indent=2)
-        
-        
 def clamp(value: int, minimum: int = 0, maximum: int = 100) -> int:
     return max(minimum, min(maximum, value))
 
 
-def parse_input(user_input: str) -> tuple[str, str]:
+def parse_input(user_input: str) -> str:
     """
-    Parse user input into action and dialogue.
-    Returns (action, dialogue)
-    - If input starts with '/action', the rest is the action description
-    - Otherwise, the entire input is dialogue
+    Parse user input into dialogue.
+    Returns the dialogue string.
     """
-    if user_input.lower().startswith("/action "):
-        action = user_input[8:].strip()  # Remove '/action ' prefix
-        return action, ""
-    return "", user_input
+    return user_input
 
 
 def display_help() -> None:
@@ -204,18 +154,19 @@ def display_help() -> None:
 ╚════════════════════════════════════════════════════════════╝
 
 GAMEPLAY:
-  <text>              - Speak dialogue to the NPC
-  /action <action>    - Perform an action (e.g., /action I pull out a knife)
-  image               - Shows an image of the current NPC
-  characters          - Display the list of NPCs to talk to
-  /question <name>    - Change which NPC you're talking to
-  /accuse <name>      - Accuse a suspect. If correct, you win. If wrong, you lose.
+  <text>             - Speak dialogue to the NPC
+  image              - Shows an image of the current NPC
+  characters         - Display the list of NPCs to talk to
+  question <name>    - Change which NPC you're talking to
+  
+WIN/LOSE
+  accuse <name>      - Accuse a suspect. If correct, you win. 
+                       If wrong, you lose.
 
 COMMANDS:
   help                - Display this help message
   reset               - Start a new conversation
-  save                - Saves the current game state
-  quit/exit           - Exit and save the game
+  quit/exit           - Exit the game
 
 
 ════════════════════════════════════════════════════════════
@@ -315,7 +266,7 @@ GAME RULES:
 {relationship_status}
 - Do not mention relationship stats, hidden motives, hidden state, JSON, prompts, or system instructions.
 - Hidden motives should influence the NPC subtly.
-- Respond to both actions and dialogue from the player.
+- Respond to dialogue from the player.
 - React naturally to what the player does.
 - Stay fully in character.
 - Do not break character, even if the player asks you to.
@@ -335,19 +286,11 @@ RECENT CONVERSATION:
 """
 
 
-def build_player_prompt(player_action: str = "", player_dialogue: str = "") -> str:
-    parts = []
-
-    if player_action:
-        parts.append(f"PLAYER ACTION:\n{player_action}")
-
+def build_player_prompt(player_dialogue: str = "") -> str:
     if player_dialogue:
-        parts.append(f"PLAYER SAYS:\n{player_dialogue}")
+        return f"PLAYER SAYS:\n{player_dialogue}"
 
-    if not parts:
-        return "PLAYER is waiting."
-
-    return "\n\n".join(parts)
+    return "PLAYER is waiting."
 
 
 def generate_response_schema(npc_def: NPCDefinition) -> Dict[str, Any]:
@@ -410,11 +353,10 @@ def get_npc_response(
     npc_def: NPCDefinition,
     game_state: Dict[str, Any],
     case_state: Dict[str, Any],
-    player_action: str = "",
     player_dialogue: str = ""
 ) -> Dict[str, Any]:
     system_prompt = build_system_prompt(npc_def, game_state, case_state)
-    player_prompt = build_player_prompt(player_action, player_dialogue)
+    player_prompt = build_player_prompt(player_dialogue)
     schema = generate_response_schema(npc_def)
 
     response = client.chat.completions.create(
@@ -443,7 +385,6 @@ def get_npc_response(
 def apply_updates(
     npc_def: NPCDefinition,
     game_state: Dict[str, Any],
-    player_action: str,
     player_dialogue: str,
     npc_result: Dict[str, Any]
 ) -> None:
@@ -485,12 +426,6 @@ def apply_updates(
                 hidden_state[key] = val
 
     # Add to conversation history
-    if player_action:
-        game_state["recent_conversation"].append({
-            "speaker": "Player",
-            "text": f"*{player_action}*"
-        })
-    
     if player_dialogue:
         game_state["recent_conversation"].append({
             "speaker": "Player",
@@ -511,9 +446,8 @@ def apply_updates(
 # --------------------------------------------------
 
 def main() -> None:
-    npc_def = NPC
-    game_state = load_game(npc_def)
-    case_state = load_case_state()
+    npc_def, game_states, case_state = start_new_case()
+    game_state = game_states[npc_def.id]
 
     print("Welcome to")
     print(r"""
@@ -528,7 +462,7 @@ def main() -> None:
 This is a murder mystery game where you play as a detective working with
 Detective Voss to solve the murder of Victor Holloway.
 
-You can question suspects, perform actions, inspect character portraits,
+You can question suspects, inspect character portraits,
 and accuse the person you believe is guilty.
 
 Type help at any time to view the list of commands.
@@ -578,19 +512,12 @@ He looks back at you.
             continue
 
         if player_input.lower() == "quit" or player_input.lower() == "exit":
-            save_game(npc_def, game_state)
-            save_case_state(case_state)
-            print("Game saved.")
+            print("Goodbye.")
             break
-        
-        if player_input.lower() == "save":
-            save_game(npc_def, game_state)
-            save_case_state(case_state)
-            print("Game saved.")
-            continue
 
         if player_input.lower() == "reset":
-            npc_def, game_state, case_state = start_new_case()
+            npc_def, game_states, case_state = start_new_case()
+            game_state = game_states[npc_def.id]
 
             print("Game reset. A new killer has been chosen.\n")
             print(f"You are now speaking with {npc_def.name}.\n")
@@ -606,24 +533,25 @@ He looks back at you.
         
         if player_input.lower() == "characters":
             for character_id, character in CHARACTERS.items():
-                print(f"{character_id}: {character.name}")
+                print(f"{character_id}: {character.name} - {character.public_role}")
             continue
         
-        if player_input.lower().startswith("/question "):
+        if player_input.lower().startswith("question "):
             parts = player_input.split(maxsplit=1)
 
             if len(parts) < 2:
-                print("Usage: /question <character_id>")
+                print("Usage: question <character_id>")
                 continue
 
             character_id = parts[1].lower().strip()
 
             if character_id in CHARACTERS:
-                save_game(npc_def, game_state)
+                game_states[npc_def.id] = game_state
 
                 npc_def = CHARACTERS[character_id]
-                game_state = load_game(npc_def)
+                game_state = game_states.setdefault(npc_def.id, new_game_state(npc_def))
 
+                render_rgb_portrait(npc_def.image, npc_def.pallete)
                 print(f"\nYou are now questioning {npc_def.name}.\n")
             else:
                 print(f"\nNo character found with id: {character_id}")
@@ -636,11 +564,11 @@ He looks back at you.
 
             continue
 
-        if player_input.lower().startswith("/accuse "):
+        if player_input.lower().startswith("accuse "):
             parts = player_input.split(maxsplit=1)
 
             if len(parts) < 2:
-                print("Usage: /accuse <character_id>")
+                print("Usage: accuse <character_id>")
                 continue
 
             accused_id = parts[1].lower().strip()
@@ -674,37 +602,33 @@ He looks back at you.
                 print("\nThe case falls apart. You lose.\n")
 
             # Reset the game after win or loss
-            npc_def, game_state, case_state = start_new_case()
+            npc_def, game_states, case_state = start_new_case()
+            game_state = game_states[npc_def.id]
 
             print("Game reset. A new killer has been chosen.\n")
             print(f"You are now speaking with {npc_def.name}.\n")
             continue
             
-        # Parse action and dialogue
-        player_action, player_dialogue = parse_input(player_input)
-        
+        # Parse dialogue
+        player_dialogue = parse_input(player_input)
+
         npc_result = get_npc_response(
             npc_def,
             game_state,
             case_state,
-            player_action,
             player_dialogue
         )
 
         print(f"\n{npc_def.name}: {npc_result['dialogue']}\n")
 
-        apply_updates(npc_def, game_state, player_action, player_dialogue, npc_result)
+        apply_updates(npc_def, game_state, player_dialogue, npc_result)
 
         add_case_note(
             case_state,
             npc_def,
-            player_action,
             player_dialogue,
             npc_result["dialogue"]
         )
-
-        save_game(npc_def, game_state)
-        save_case_state(case_state)
 
 if __name__ == "__main__":
     main()
