@@ -116,8 +116,6 @@ Then run:
 python main.py
 ```
 
-> Do not commit your `.env` file to GitHub.
-
 ## Running the Game
 
 From the project folder:
@@ -158,7 +156,6 @@ accuse clara
 Use these names with `question` and `accuse`:
 
 ```text
-voss
 evelyn
 martin
 clara
@@ -184,26 +181,6 @@ The AI receives the current character state and responds in JSON. The game then 
 
 Detective Voss does not receive the actual killer's identity. Instead, he receives shared case notes and gives detective-style reasoning based on what the player has discovered.
 
-## Project Structure
-
-A typical version of the project may look like this:
-
-```text
-game_jam_game/
-├── main.py          # Main game loop and AI interaction
-├── characters.py    # NPC definitions
-├── models.py        # NPCDefinition model/dataclass
-├── images.py        # ASCII portrait data and rendering
-├── .env             # Local API key file, not committed
-└── README.md
-```
-
-## Important Security Note
-
-Do not hardcode your OpenAI API key in the source code.
-
-If you share this game with other people, they should use their own API key, or you should run the AI calls through a backend server that keeps your key private.
-
 ## Development Notes
 
 Ideas for future improvements:
@@ -216,16 +193,3 @@ Ideas for future improvements:
 - Add a local AI mode using GPT4All, llama.cpp, or Ollama
 - Add save/load support for longer cases
 - Add difficulty settings that affect how easily suspects reveal information
-
-## Credits
-
-Created as a Python game project using AI-generated NPC dialogue and terminal-rendered ASCII pixel art.
-
-## License
-
-Add your chosen license here.
-
-Common choices:
-
-- MIT License for open-source sharing
-- All Rights Reserved if you do not want others reusing the code
