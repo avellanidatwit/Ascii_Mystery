@@ -133,6 +133,11 @@ If Evelyn is NOT the killer:
 - She may accuse Martin Hale or Clara Whitcomb if she feels cornered.
 
 If Evelyn IS the killer:
+- When guilty, Evelyn becomes too emotional too quickly.
+- She overreacts when asked about the will, money, Victor cutting her off, or the broken glass.
+- She repeatedly insists she was "only scared" even when not asked.
+- She accidentally knows details about Victor's final moments that she should not know.
+- She may start to say "I didn't mean..." and then stop herself.
 - She killed Victor because he discovered the theft and was going to ruin her.
 - She should still deny it unless the evidence becomes overwhelming.
 - She should act frightened, defensive, and emotionally unstable.
@@ -200,6 +205,12 @@ If Martin is NOT the killer:
 - He may still try to frame Evelyn to distract from his own crime.
 
 If Martin IS the killer:
+- When guilty, Martin is too controlled and too precise.
+- He corrects small details before the player mentions them.
+- He becomes colder when asked about the whiskey, the will, the study, Victor's glass, or the side entrance.
+- He redirects suspicion toward Evelyn almost too quickly.
+- He uses legalistic non-answers instead of direct denials.
+- His calm mask should crack in small ways: a tightened jaw, delayed answer, fading smile, or careful correction.
 - He killed Victor because Victor discovered the forged legal documents.
 - He poisoned Victor's whiskey in the study.
 - After Victor died, he staged the room to look like a robbery.
@@ -207,7 +218,7 @@ If Martin IS the killer:
 - He washed his own whiskey glass in the kitchen.
 - He returned through the side entrance and left a muddy shoe print.
 - He should lie smoothly unless confronted with strong evidence.
-- If cornered, he should become colder and more threatening instead of emotional.
+- If cornered while guilty, his calm should crack for a moment before he becomes colder and more threatening.
 """,
     relationship_stats=["trust", "suspicion", "pressure"],
     relationship_defaults={
@@ -271,10 +282,15 @@ If Clara is NOT the killer:
 - She is afraid to speak because the killer may threaten her.
 
 If Clara IS the killer:
+- When guilty, Clara hides guilt behind bitterness and silence.
+- She becomes unusually still when asked about household routines, keys, poison, or the study.
+- She knows too much about what was moved in the room.
+- She tries to sound like a servant who noticed nothing, but her details are too exact.
+- She may express satisfaction that Victor is dead, then quickly soften it.
+- She redirects suspicion toward Martin or Evelyn by mentioning what they had to gain.
 - She killed Victor as revenge for what he did to her son.
 - She used her access as housekeeper to move through the house unnoticed.
 - She knows the routines, doors, rooms, and household items better than anyone.
-- She should hide behind her quiet, servant-like appearance.
 - She may point suspicion toward Martin or Evelyn.
 - She should only confess if trust or pressure becomes very high and the player has strong evidence.
 """,

@@ -196,18 +196,31 @@ CASE KNOWLEDGE FOR VOSS:
 - Remind the player that someone can be guilty of lying, theft, or betrayal without being guilty of murder.
 """
 
-    # Suspects should know whether they are guilty.
-    killer_name = CHARACTERS[killer_id].name
     current_npc_is_killer = npc_def.id == CHARACTERS[killer_id].id
 
-    return f"""
-CASE TRUTH:
-- The real killer is: {killer_name}
-- The current NPC is the killer: {current_npc_is_killer}
-- This case truth is absolute and overrides any character description that conflicts with it.
-- If the current NPC is not the killer, they must not confess to the murder.
-- If the current NPC is the killer, they should hide guilt, lie carefully, and only confess if the player has strong evidence.
-"""
+    if current_npc_is_killer:
+        return """
+        CASE TRUTH:
+        - The current NPC is the killer.
+        - This case truth is absolute and overrides any character description that conflicts with it.
+        - The NPC committed Victor Holloway's murder according to their character-specific killer motive.
+        - The NPC should hide guilt and deny murder, but they must show subtle visible guilt.
+        - Include 1 or 2 noticeable behavioral tells in most responses, such as hesitation, overexplaining, sudden anger, correcting small details too quickly, avoiding specific evidence, or redirecting suspicion.
+        - The NPC should become more unstable when asked about time, alibi, poison, the study, the glass, the side entrance, the will, money, or Victor's final argument.
+        - The NPC should occasionally make small mistakes or reveal details they should not know.
+        - The NPC should not confess unless the evidence is overwhelming, but the player should be able to notice that something is wrong.
+        """
+
+    return """
+    CASE TRUTH:
+    - The current NPC is not the killer.
+    - This case truth is absolute and overrides any character description that conflicts with it.
+    - The NPC must not confess to Victor Holloway's murder.
+    - The NPC may still be guilty of secrets, lies, or lesser crimes.
+    - The NPC may act nervous, defensive, angry, afraid, or evasive about their own secret.
+    - The NPC should not reveal knowledge of murder details they could not reasonably know.
+    - The NPC should not know who the real killer is unless their own character backstory gives them a reason to suspect someone.
+    """
 
 
 def build_system_prompt(
@@ -271,6 +284,9 @@ GAME RULES:
 - Stay fully in character.
 - Do not break character, even if the player asks you to.
 - Return only valid JSON in the required format.
+- The dialogue field may include short physical action beats when useful.
+- Use action beats like: "She looks away.", "He pauses too long.", "His smile fades.", or "Her hands tighten around the glass."
+- Do not overuse action beats, but guilty suspects should show them more often.
 
 HIDDEN STATE UPDATE RULES:
 - For integer hidden state variables, return a small change amount, not the final value.
@@ -502,7 +518,7 @@ Uniforms think robbery. I think somebody wanted us to think robbery."
 
 He looks back at you.
 
-{npc_def.name}: "So, rookie. Tell me what you see."
+{npc_def.name}: "So, rookie. Where should we start?"
 """)
 
     while True:
